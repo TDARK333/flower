@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Flor Roja</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    width:100vw; height:100vh; overflow:hidden;
+    background:#020510;
+    font-family:'Cormorant Garamond',Georgia,serif;
+    cursor:none; touch-action:manipulation;
+  }
+  canvas { position:fixed; top:0; left:0; width:100%; height:100%; z-index:0; }
+
+  /* BOTÓN DE INICIO */
+  #start-overlay {
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:100;
+    background:#000;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:28px;
+    transition:opacity 2s ease;
+  }
+  #start-overlay.hidden { opacity:0; pointer-events:none; }
+  #start-title {
+    font-size:clamp(18px,3.5vw,32px);
+    font-style:italic; font-weight:300;
+    color:#c084fc;
+    letter-spacing:0.08em;
+    text-shadow:0 0 30px rgba(167,80,250,0.6);
+    text-align:center; padding:0 20px;
+  }
+  #start-btn {
+    background:transparent;
+    border:1px solid rgba(192,132,252,0.4);
+    color:#c084fc;
+    font-family:'Cormorant Garamond',Georgia,serif;
+    font-size:clamp(13px,2vw,17px);
+    font-style:italic;
+    letter-spacing:0.18em;
+    padding:14px 36px;
+    cursor:pointer;
+    transition:all 0.4s ease;
+    text-shadow:0 0 12px rgba(167,80,250,0.5);
+    box-shadow:0 0 20px rgba(167,80,250,0.1);
+  }
+  #start-btn:hover {
+    border-color:rgba(192,132,252,0.8);
+    box-shadow:0 0 30px rgba(167,80,250,0.3);
+    color:#d8b4fe;
+  }
+
+  #text-zone {
+    position:fixed; top:0; left:0; right:0; height:28vh; z-index:10;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px 30px;
+    background:linear-gradient(to bottom,rgba(2,5,16,0.92) 0%,rgba(2,5,16,0.75) 70%,transparent 100%);
+    pointer-events:none;
+    transition:background 3s ease, opacity 2s ease;
+  }
+  #text-zone.golden-bg {
+    background:linear-gradient(to bottom,rgba(5,3,0,0.97) 0%,rgba(5,3,0,0.85) 70%,transparent 100%);
+  }
+  #phrase-display { text-align:center; max-width:700px; width:100%; }
+  #phrase-text {
+    font-size:clamp(14px,2.2vw,20px); font-weight:300; font-style:italic;
+    color:#c084fc; line-height:1.7; letter-spacing:0.03em; min-height:4em;
+    text-shadow:0 0 20px rgba(167,80,250,0.6),0 0 40px rgba(167,80,250,0.2);
+    transition:color 2s ease, text-shadow 2s ease;
+  }
+  #phrase-text.golden-text {
+    color:#ffd700;
+    text-shadow:0 0 20px rgba(255,200,0,0.8),0 0 50px rgba(255,160,0,0.4);
+  }
+  .cursor-blink {
+    display:inline-block; width:2px; height:1.1em;
+    background:#d946ef; margin-left:2px; vertical-align:middle;
+    animation:blink 1s step-end infinite;
+    box-shadow:0 0 8px #d946ef,0 0 16px #a855f7;
+    transition:background 2s, box-shadow 2s;
+  }
+  .cursor-blink.golden { background:#ffd700; box-shadow:0 0 8px #ffd700,0 0 16px #ffaa00; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  #tap-hint {
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    color:rgba(192,132,252,0.4); font-size:12px; font-style:italic;
+    letter-spacing:0.15em; z-index:10; pointer-events:none;
+    transition:opacity 1s, color 2s;
+  }
+  #phrase-counter {
+    position:fixed; top:10px; right:16px;
+    color:rgba(192,132,252,0.3); font-size:11px;
+    letter-spacing:0.1em; z-index:11; pointer-events:none;
+    transition:color 2s, opacity 1s;
+  }
+
+  /* PANTALLA FINAL */
+  #final-screen {
+    position:fixed; top:0; left:0; right:0; bottom:0; z-index:50;
+    background:#000;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:40px 30px;
+    opacity:0; pointer-events:none;
+    transition:opacity 3s ease;
+  }
+  #final-screen.visible { opacity:1; pointer-events:all; }
+  #final-phrases { text-align:center; max-width:680px; margin-bottom:50px; }
+  .final-line {
+    font-size:clamp(14px,2.2vw,20px); font-weight:300; font-style:italic;
+    color:#ffd700; line-height:1.85; letter-spacing:0.04em;
+    opacity:0; transform:translateY(12px);
+    transition:opacity 1.4s ease, transform 1.4s ease;
+    text-shadow:0 0 20px rgba(255,200,0,0.7),0 0 50px rgba(255,160,0,0.3);
+  }
+  .final-line.show { opacity:1; transform:translateY(0); }
+  #te-amo {
+    font-size:clamp(58px,13vw,120px); font-weight:400; font-style:italic;
+    color:#cc0000; letter-spacing:0.08em;
+    opacity:0; transform:scale(0.5);
+    transition:opacity 2.5s ease, transform 2.5s ease;
+    text-shadow:
+      0 0 30px rgba(220,0,0,0.95),
+      0 0 70px rgba(180,0,0,0.7),
+      0 0 140px rgba(150,0,0,0.4),
+      0 0 220px rgba(120,0,0,0.2);
+    animation: teAmoPulse 3s ease-in-out infinite;
+  }
+  #te-amo.show { opacity:1; transform:scale(1); }
+  @keyframes teAmoPulse {
+    0%,100%{ text-shadow:0 0 30px rgba(220,0,0,0.95),0 0 70px rgba(180,0,0,0.7),0 0 140px rgba(150,0,0,0.4); }
+    50%{ text-shadow:0 0 50px rgba(255,0,0,1),0 0 100px rgba(220,0,0,0.9),0 0 200px rgba(180,0,0,0.5),0 0 300px rgba(140,0,0,0.3); }
+  }
+</style>
+</head>
+<body>
+
+<!-- PANTALLA DE INICIO -->
+<div id="start-overlay">
+  <div id="start-title">para vos, con todo mi ser</div>
+  <button id="start-btn" onclick="startExperience()">comenzar</button>
+</div>
+
+<canvas id="scene"></canvas>
+
+<div id="text-zone">
+  <div id="phrase-display">
+    <div id="phrase-text">
+      <span id="typed-text"></span><span class="cursor-blink" id="cursor"></span>
+    </div>
+  </div>
+</div>
+<div id="tap-hint">toca para continuar</div>
+<div id="phrase-counter"></div>
+
+<div id="final-screen">
+  <div id="final-phrases"></div>
+  <div id="te-amo">TE AMO</div>
+</div>
+
+<!-- AUDIO -->
+<audio id="bgm" loop>
+  <source src="fi_farewell.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+// ── AUDIO ─────────────────────────────────────────────────────────────────────
+const bgm = document.getElementById('bgm');
+bgm.volume = 0;
+
+function fadeInMusic() {
+  bgm.play().catch(()=>{});
+  let vol = 0;
+  const fade = setInterval(()=>{
+    vol = Math.min(vol + 0.01, 0.75);
+    bgm.volume = vol;
+    if (vol >= 0.75) clearInterval(fade);
+  }, 80);
+}
+
+function startExperience() {
+  const overlay = document.getElementById('start-overlay');
+  overlay.classList.add('hidden');
+  setTimeout(()=> overlay.remove(), 2200);
+  fadeInMusic();
+  setTimeout(()=> showPhrase(0), 1400);
+}
+
+// ── FRASES MORADAS ────────────────────────────────────────────────────────────
+const phrases = [
+  "En un mundo donde la gente busca lo que parece mostrarse,",
+  "yo encontré en vos un universo que trasciende lo que los ojos pueden tocar, solo el alma puede descubrir,",
+  "cada día que me mostras tu verdadero yo, siento que lo más precioso no es lo que brilla por fuera, sino lo que late por dentro,",
+  "ahí descubrí que la belleza no se muestra, sino que se descubre,",
+  "me enamoré de cada fragmento tuyo que revelabas,",
+  "de tu risa que escapa sin aviso,",
+  "de tu silencio que parece decirme miles de cosas,",
+  "de tus sueños que me llaman a buscarte,",
+  "de tus miedos que me mostraron la valentía y fuerza que tenés,",
+  "de tus deseos que me invitan a cumplirlos contigo,",
+  "cada pensamiento profundo, cada pequeño gesto, atraía mi corazón como un imán hacia vos,",
+  "para mí descubrirte es como leer un libro infinito, cada página un misterio que deseo explorar sin prisa, sin temor, con la certeza de que cada línea me acerca más a vos, cada vez más cerca de tu esencia,",
+  "la manera en la que existís en este mundo es completa, compleja, auténtica, luminosa e incluso en tus sombras,",
+  "y cuanto más te conozco,",
+  "más me doy cuenta de que hay partes de vos que aún no alcanzo a comprender y eso hace que solo te admire más,",
+  "que quiera aprender todo de vos lentamente y sin dejar de sorprenderme,",
+  "cada día que hablo con vos, cada instante que compartimos algo, me enamora más,",
+  "no es un enamoramiento fugaz,",
+  "es como un río que crece con cada descubrimiento, cada momento en que tu esencia se me revela,",
+  "me enamoro de vos no por lo que me das, sino por lo que sos, por lo que estás construyendo en vos misma,",
+  "y quiero que sepas algo con todo mi ser,",
+  "mi amor no exige, no aprieta, no asfixia,",
+  "solo existe para estar profundo, paciente, dispuesto a acompañarte, a descubrirte, admirarte,",
+  "mientras vos me dejes estar a tu lado,"
+];
+
+const goldenPhrases = [
+  "porque amarte no es solo sentir,",
+  "es escuchar, aprender y maravillarse, crecer en cada instante de tu existencia,",
+  "y esto sale de mi corazón,",
+  "tengo un amor que respira por vos, que vive con vos, que se expande con cada palabra, cada gesto, cada descubrimiento,",
+  "es un amor que se siente con cada fibra de mi ser,",
+  "que vos sos incomparable y que amarte es el privilegio más profundo que me ha dado la vida,"
+];
+
+const finalLines = [
+  "porque amarte no es solo sentir,",
+  "es escuchar, aprender y maravillarse,",
+  "crecer en cada instante de tu existencia,",
+  "y esto sale de mi corazón,",
+  "tengo un amor que respira por vos, que vive con vos,",
+  "que se expande con cada palabra, cada gesto, cada descubrimiento,",
+  "es un amor que se siente con cada fibra de mi ser,",
+  "que vos sos incomparable",
+  "y que amarte es el privilegio más profundo que me ha dado la vida,"
+];
+
+// ── CANVAS ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('scene');
+const ctx = canvas.getContext('2d');
+let W, H;
+function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+let flowerGrowth=0, wisteriaGrowth=0, goldenAmount=0, time=0;
+let phraseIndex=0, goldenPhraseIndex=0;
+let isGoldenPhase=false, finalShown=false;
+let typeInterval=null;
+
+// ── LLUVIA ────────────────────────────────────────────────────────────────────
+const drops = Array.from({length:180}, ()=>({
+  x:Math.random()*1.2-0.1, y:Math.random(),
+  speed:0.003+Math.random()*0.004,
+  len:0.015+Math.random()*0.025,
+  alpha:0.15+Math.random()*0.35,
+  drift:(Math.random()-0.5)*0.0005
+}));
+function updateRain() {
+  if (goldenAmount>=0.5) return;
+  for (const d of drops) {
+    d.y+=d.speed; d.x+=d.drift;
+    if (d.y>1.05){d.y=-d.len; d.x=Math.random()*1.2-0.1;}
+  }
+}
+function drawRain() {
+  const fade=Math.max(0,1-goldenAmount*2); if(fade<=0)return;
+  const cx=W*0.5;
+  for (const d of drops) {
+    const sx=d.x*W,sy=d.y*H,ex=sx+d.drift*W*20,ey=sy+d.len*H;
+    const dist=Math.hypot(sx-cx,sy-H*0.72)/(W*0.25);
+    const glow=Math.max(0,1-dist)*flowerGrowth;
+    ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(ex,ey);
+    ctx.strokeStyle=`rgba(${Math.round(180+75*glow)},${Math.round(200-180*glow)},${Math.round(255-255*glow)},${d.alpha*fade})`;
+    ctx.lineWidth=0.8; ctx.stroke();
+  }
+}
+
+// ── FLORES SECUNDARIAS ────────────────────────────────────────────────────────
+const palettes=[[255,105,180],[180,100,255],[100,140,255],[255,180,100],[120,220,180],[200,80,200]];
+const sideFlowers=Array.from({length:32},()=>({
+  xf:0.05+Math.random()*0.9, yf:0.45+Math.random()*0.5,
+  size:6+Math.random()*14, petals:4+Math.floor(Math.random()*4),
+  col:palettes[Math.floor(Math.random()*palettes.length)],
+  phase:Math.random()*Math.PI*2,
+  swayAmp:0.002+Math.random()*0.004, swaySpeed:0.4+Math.random()*0.6,
+  alpha:0.25+Math.random()*0.3
+}));
+function drawSideFlower(f,t) {
+  const fade=Math.max(0,1-goldenAmount*1.5); if(fade<=0)return;
+  const x=f.xf*W, y=f.yf*H+Math.sin(t*f.swaySpeed+f.phase)*f.swayAmp*H;
+  const s=f.size*(0.95+0.05*Math.sin(t*0.8+f.phase));
+  const [r,g,b]=f.col;
+  ctx.save(); ctx.translate(x,y); ctx.globalAlpha=f.alpha*fade;
+  ctx.beginPath(); ctx.moveTo(0,s*1.2); ctx.lineTo(0,s*3.5);
+  ctx.strokeStyle=`rgba(40,100,40,0.4)`; ctx.lineWidth=1.2; ctx.stroke();
+  for(let p=0;p<f.petals;p++){
+    const angle=(p/f.petals)*Math.PI*2;
+    ctx.save(); ctx.rotate(angle);
+    ctx.beginPath(); ctx.ellipse(0,-s*0.9,s*0.38,s*0.65,0,0,Math.PI*2);
+    ctx.fillStyle=`rgba(${r},${g},${b},0.55)`; ctx.fill(); ctx.restore();
+  }
+  ctx.beginPath(); ctx.arc(0,0,s*0.3,0,Math.PI*2);
+  ctx.fillStyle=`rgba(255,240,180,0.6)`; ctx.fill(); ctx.restore();
+}
+
+// ── FLOR ROJA ─────────────────────────────────────────────────────────────────
+function drawRedFlower(t) {
+  const g=flowerGrowth; if(g<=0.01)return;
+  const fadeOut=Math.max(0,1-goldenAmount*3); if(fadeOut<=0)return;
+  const cx=W*0.5, baseY=H*0.96;
+  const stemH=H*0.32*Math.min(g*1.5,1), topY=baseY-stemH;
+  const sway=Math.sin(t*0.5)*5*g;
+  if(g>0.3){
+    const halo=ctx.createRadialGradient(cx,baseY,0,cx,baseY,W*0.4*g);
+    halo.addColorStop(0,`rgba(200,20,20,${0.12*g*fadeOut})`);
+    halo.addColorStop(1,'transparent');
+    ctx.fillStyle=halo; ctx.fillRect(0,H*0.5,W,H*0.5);
+  }
+  ctx.save(); ctx.globalAlpha=fadeOut; ctx.translate(sway,0);
+  ctx.beginPath(); ctx.moveTo(cx,baseY);
+  ctx.bezierCurveTo(cx+sway*0.3,baseY-stemH*0.4,cx-sway*0.2,baseY-stemH*0.7,cx,topY);
+  const sg=ctx.createLinearGradient(cx,baseY,cx,topY);
+  sg.addColorStop(0,'rgba(20,60,10,0.9)'); sg.addColorStop(1,'rgba(40,120,20,0.9)');
+  ctx.strokeStyle=sg; ctx.lineWidth=3+g*3; ctx.lineCap='round'; ctx.stroke();
+  if(g>0.35){
+    const lG=(g-0.35)/0.65, ly=topY+stemH*0.35;
+    for(const side of[-1,1]){
+      ctx.save(); ctx.translate(cx,ly); ctx.rotate(side*0.6+Math.sin(t*0.5)*0.05);
+      ctx.beginPath(); ctx.ellipse(side*12*lG,-8*lG,14*lG,7*lG,side*0.3,0,Math.PI*2);
+      ctx.fillStyle=`rgba(30,100,20,${0.7*lG})`; ctx.fill(); ctx.restore();
+    }
+  }
+  if(g>0.55){
+    const pG=(g-0.55)/0.45, n=8;
+    const ps=(18+pG*30)*(1+0.04*Math.sin(t*2));
+    const gR=ctx.createRadialGradient(cx,topY,0,cx,topY,ps*2.5);
+    gR.addColorStop(0,`rgba(220,30,30,${0.35*pG})`);
+    gR.addColorStop(0.5,`rgba(180,10,10,${0.15*pG})`);
+    gR.addColorStop(1,'transparent');
+    ctx.fillStyle=gR; ctx.beginPath(); ctx.arc(cx,topY,ps*2.5,0,Math.PI*2); ctx.fill();
+    for(let p=0;p<n;p++){
+      const a=(p/n)*Math.PI*2+t*0.03;
+      ctx.save(); ctx.translate(cx,topY); ctx.rotate(a);
+      ctx.beginPath(); ctx.ellipse(0,-ps*0.85,ps*0.38,ps*0.7,0,0,Math.PI*2);
+      const pg=ctx.createRadialGradient(0,-ps*0.5,0,0,-ps*0.5,ps*0.9);
+      pg.addColorStop(0,`rgba(255,80,60,${0.9*pG})`);
+      pg.addColorStop(0.6,`rgba(200,10,10,${0.85*pG})`);
+      pg.addColorStop(1,`rgba(140,0,0,${0.5*pG})`);
+      ctx.fillStyle=pg; ctx.fill(); ctx.restore();
+    }
+    for(let p=0;p<n;p++){
+      const a=(p/n)*Math.PI*2+Math.PI/n+t*0.02;
+      ctx.save(); ctx.translate(cx,topY); ctx.rotate(a);
+      ctx.beginPath(); ctx.ellipse(0,-ps*0.6,ps*0.25,ps*0.5,0,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,60,40,${0.7*pG})`; ctx.fill(); ctx.restore();
+    }
+    const cg=ctx.createRadialGradient(cx,topY,0,cx,topY,ps*0.4);
+    cg.addColorStop(0,`rgba(255,220,100,${pG})`);
+    cg.addColorStop(0.5,`rgba(200,80,0,${pG})`);
+    cg.addColorStop(1,`rgba(120,0,0,${pG})`);
+    ctx.beginPath(); ctx.arc(cx,topY,ps*0.35,0,Math.PI*2);
+    ctx.fillStyle=cg; ctx.fill();
+    if(g>0.85){
+      for(let s=0;s<6;s++){
+        const sa=(s/6)*Math.PI*2+t*0.8;
+        const sd=ps*(1.1+0.3*Math.sin(t*1.5+s));
+        ctx.beginPath(); ctx.arc(cx+Math.cos(sa)*sd,topY+Math.sin(sa)*sd,1.5+Math.sin(t*2+s),0,Math.PI*2);
+        ctx.fillStyle=`rgba(255,200,100,${0.7*(g-0.85)/0.15})`; ctx.fill();
+      }
+    }
+  } else if(g>0.3){
+    const bG=(g-0.3)/0.25;
+    ctx.beginPath(); ctx.ellipse(cx,topY,4*bG,8*bG,0,0,Math.PI*2);
+    ctx.fillStyle=`rgba(180,30,30,${bG*0.8})`; ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ── ÁRBOL WISTERIA ────────────────────────────────────────────────────────────
+function drawWisteria(t) {
+  const g=wisteriaGrowth; if(g<=0)return;
+  const cx=W*0.5, baseY=H*0.99;
+  const halo=ctx.createRadialGradient(cx,baseY,0,cx,baseY,W*0.9*g);
+  halo.addColorStop(0,`rgba(255,200,50,${0.3*g})`);
+  halo.addColorStop(0.4,`rgba(200,140,0,${0.12*g})`);
+  halo.addColorStop(1,'transparent');
+  ctx.fillStyle=halo; ctx.fillRect(0,0,W,H);
+  const trunkH=H*0.78*Math.min(g*1.1,1);
+  const tg=ctx.createLinearGradient(cx,baseY,cx,baseY-trunkH);
+  tg.addColorStop(0,`rgba(70,40,5,${g})`); tg.addColorStop(1,`rgba(130,90,25,${g})`);
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(cx,baseY);
+  ctx.bezierCurveTo(cx+8,baseY-trunkH*0.35,cx-6,baseY-trunkH*0.65,cx,baseY-trunkH);
+  ctx.strokeStyle=tg; ctx.lineWidth=18+g*18; ctx.lineCap='round'; ctx.stroke();
+  ctx.restore();
+  if(g<0.12)return;
+  const bG=Math.max(0,(g-0.12)/0.88);
+  const branches=[
+    {ang:-0.95,len:0.32,w:9,r:0.52},{ang:0.90,len:0.30,w:9,r:0.55},
+    {ang:-0.60,len:0.26,w:7,r:0.67},{ang:0.55,len:0.24,w:7,r:0.70},
+    {ang:-0.30,len:0.20,w:6,r:0.80},{ang:0.25,len:0.18,w:6,r:0.83},
+    {ang:-1.25,len:0.18,w:5,r:0.38},{ang:1.20,len:0.16,w:5,r:0.40},
+    {ang:-0.10,len:0.14,w:4,r:0.92},{ang:0.08,len:0.12,w:4,r:0.94},
+  ];
+  for(const br of branches){
+    const bx=cx, by=baseY-trunkH*br.r;
+    const bLen=W*br.len*bG;
+    const sw=Math.sin(t*0.4+br.ang)*7*bG;
+    const ex=bx+Math.cos(br.ang-Math.PI/2)*bLen+sw;
+    const ey=by+Math.sin(br.ang-Math.PI/2)*bLen;
+    const mx=(bx+ex)/2+sw*0.5, my=(by+ey)/2-25;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(mx,my,ex,ey);
+    ctx.strokeStyle=`rgba(110,70,15,${0.85*bG})`; ctx.lineWidth=br.w*bG;
+    ctx.lineCap='round'; ctx.stroke(); ctx.restore();
+    if(bG>0.25){
+      const cG=(bG-0.25)/0.75;
+      wisteriaCluster(ex,ey,cG,t,br.ang);
+      wisteriaCluster(mx,my,cG*0.75,t,br.ang+0.4);
+      if(bG>0.6) wisteriaCluster((bx+mx)/2,(by+my)/2,cG*0.5,t,br.ang-0.3);
+    }
+  }
+}
+function wisteriaCluster(x,y,g,t,ang){
+  if(g<=0)return;
+  const cLen=H*0.22*g, sw=Math.sin(t*0.55+ang)*10*g;
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(x,y);
+  ctx.quadraticCurveTo(x+sw*0.4,y+cLen*0.5,x+sw,y+cLen);
+  ctx.strokeStyle=`rgba(140,95,15,${0.4*g})`; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.restore();
+  const count=Math.floor(15*g);
+  for(let i=0;i<count;i++){
+    const ratio=i/count;
+    const fx=x+sw*ratio+(Math.random()-0.5)*14;
+    const fy=y+cLen*ratio+(Math.random()-0.5)*4;
+    const fs=(2.5+Math.random()*5)*g;
+    const pulse=1+0.12*Math.sin(t*2.2+i*0.7+ang);
+    const gC=Math.floor(175+Math.random()*60);
+    const bC=Math.floor(10+Math.random()*40);
+    ctx.beginPath(); ctx.arc(fx,fy,fs*pulse,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,${gC},${bC},${0.82*g})`; ctx.fill();
+    ctx.beginPath(); ctx.arc(fx,fy,fs*pulse*2,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,210,60,${0.1*g})`; ctx.fill();
+  }
+}
+
+// ── FONDO ─────────────────────────────────────────────────────────────────────
+function drawBackground(){
+  const n=goldenAmount;
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,`rgb(${Math.round(2+3*n)},${Math.round(5-3*n)},${Math.round(16-14*n)})`);
+  grad.addColorStop(0.45,`rgb(${Math.round(5+3*n)},${Math.round(12-9*n)},${Math.round(30-28*n)})`);
+  grad.addColorStop(0.75,`rgb(${Math.round(8+2*n)},${Math.round(16-13*n)},${Math.round(26-24*n)})`);
+  grad.addColorStop(1,`rgb(${Math.round(3+2*n)},${Math.round(8-6*n)},${Math.round(16-14*n)})`);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+  if(flowerGrowth>0.5&&goldenAmount<0.5){
+    const g=(flowerGrowth-0.5)/0.5;
+    const rg=ctx.createRadialGradient(W*0.5,H*0.96,0,W*0.5,H*0.96,W*0.5);
+    rg.addColorStop(0,`rgba(160,10,10,${0.18*g*(1-goldenAmount*2)})`);
+    rg.addColorStop(1,'transparent');
+    ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+  }
+}
+
+// ── LOOP ──────────────────────────────────────────────────────────────────────
+let lastTs=0;
+function animate(ts){
+  const dt=Math.min((ts-lastTs)/1000,0.05); lastTs=ts; time+=dt;
+  if(flowerGrowth<1) flowerGrowth=Math.min(1,flowerGrowth+dt*0.018);
+  if(isGoldenPhase&&flowerGrowth>=1){
+    wisteriaGrowth=Math.min(1,wisteriaGrowth+dt*0.01);
+    goldenAmount=Math.min(1,goldenAmount+dt*0.012);
+  }
+  ctx.clearRect(0,0,W,H);
+  drawBackground(); updateRain();
+  for(const f of sideFlowers) drawSideFlower(f,time);
+  drawRain(); drawRedFlower(time); drawWisteria(time);
+  requestAnimationFrame(animate);
+}
+requestAnimationFrame(animate);
+
+// ── TEXTO ─────────────────────────────────────────────────────────────────────
+const typedEl=document.getElementById('typed-text');
+const hintEl=document.getElementById('tap-hint');
+const counterEl=document.getElementById('phrase-counter');
+const phraseTextEl=document.getElementById('phrase-text');
+const cursorEl=document.getElementById('cursor');
+const textZoneEl=document.getElementById('text-zone');
+const finalScreen=document.getElementById('final-screen');
+const total=phrases.length+goldenPhrases.length;
+
+function typePhrase(text){
+  if(typeInterval) clearInterval(typeInterval);
+  let i=0; typedEl.textContent='';
+  const speed=Math.max(16,Math.min(42,28000/text.length));
+  typeInterval=setInterval(()=>{
+    i++; typedEl.textContent=text.slice(0,i);
+    if(i>=text.length) clearInterval(typeInterval);
+  },speed);
+}
+function showPhrase(idx){
+  if(idx>=phrases.length){startGoldenPhase();return;}
+  counterEl.textContent=`${idx+1} / ${total}`;
+  typePhrase(phrases[idx]);
+}
+function startGoldenPhase(){
+  isGoldenPhase=true;
+  phraseTextEl.classList.add('golden-text');
+  cursorEl.classList.add('golden');
+  textZoneEl.classList.add('golden-bg');
+  counterEl.style.color='rgba(255,200,0,0.4)';
+  hintEl.style.color='rgba(255,200,0,0.4)';
+  showGoldenPhrase(0);
+}
+function showGoldenPhrase(idx){
+  if(idx>=goldenPhrases.length){setTimeout(showFinalScreen,900);return;}
+  counterEl.textContent=`${phrases.length+idx+1} / ${total}`;
+  typePhrase(goldenPhrases[idx]);
+  goldenPhraseIndex=idx;
+}
+function showFinalScreen(){
+  if(finalShown)return; finalShown=true;
+  textZoneEl.style.opacity='0';
+  hintEl.style.opacity='0';
+  counterEl.style.opacity='0';
+  finalScreen.classList.add('visible');
+  const container=document.getElementById('final-phrases');
+  finalLines.forEach((line,i)=>{
+    const el=document.createElement('div');
+    el.className='final-line'; el.textContent=line;
+    container.appendChild(el);
+    setTimeout(()=>el.classList.add('show'),600+i*750);
+  });
+  setTimeout(()=>document.getElementById('te-amo').classList.add('show'),
+    600+finalLines.length*750+1200);
+}
+function nextPhrase(){
+  if(finalShown)return;
+  if(typeInterval) clearInterval(typeInterval);
+  hintEl.style.opacity='0';
+  if(!isGoldenPhase){
+    typedEl.textContent=phrases[phraseIndex]||'';
+    setTimeout(()=>{phraseIndex++;showPhrase(phraseIndex);},300);
+  } else {
+    typedEl.textContent=goldenPhrases[goldenPhraseIndex]||'';
+    setTimeout(()=>{goldenPhraseIndex++;showGoldenPhrase(goldenPhraseIndex);},300);
+  }
+}
+
+document.addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  // No avanzar si se toca el botón de inicio
+  if(e.target.id==='start-btn'||e.target.id==='start-overlay') return;
+  if(document.getElementById('start-overlay')&&!document.getElementById('start-overlay').classList.contains('hidden')) return;
+  nextPhrase();
+  const color=isGoldenPhase?'rgba(255,200,0,0.55)':'rgba(192,84,255,0.55)';
+  const burst=document.createElement('div');
+  burst.style.cssText=`position:fixed;pointer-events:none;z-index:20;
+    left:${e.clientX}px;top:${e.clientY}px;
+    width:60px;height:60px;border-radius:50%;
+    background:radial-gradient(circle,${color} 0%,transparent 70%);
+    transform:translate(-50%,-50%) scale(0);
+    animation:burstAnim 0.5s ease-out forwards;`;
+  document.body.appendChild(burst);
+  setTimeout(()=>burst.remove(),600);
+});
+
+const s=document.createElement('style');
+s.textContent=`@keyframes burstAnim{to{transform:translate(-50%,-50%) scale(2.8);opacity:0}}`;
+document.head.appendChild(s);
+</script>
+</body>
+</html>
